@@ -1,14 +1,12 @@
-import { ConnectButton } from "web3uikit";
-import { useMoralis } from "react-moralis";
-import { useEffect } from "react";
+import { ConnectButton } from "web3uikit"
 
 export const Header = () => {
-  const { chainId: chainIdHex, isWeb3Enabled } = useMoralis();
-
-  return (
-    <div className="flex flex-row">
-      <h1 className="text-3xl font-bold">Flippy!</h1>
-      <ConnectButton moralisAuth={true} />
-    </div>
-  );
-};
+    return (
+        <nav className="p-5 flex flex-row border-b-2">
+            <h1 className="py-4 px-4 font-bold text-3xl">Flippy!</h1>
+            <div className="ml-auto py-2 px-4">
+                <ConnectButton moralisAuth={true} />
+            </div>
+        </nav>
+    )
+}

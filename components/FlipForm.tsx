@@ -1,8 +1,8 @@
 import { Input, Button } from "web3uikit"
-import { useMoralis, useWeb3Contract } from "react-moralis"
+import { useMoralis, useWeb3Contract, useMoralisQuery, useMoralisSubscription } from "react-moralis"
 import { useEffect, useState } from "react"
 import { abi, contractAddresses } from "../constants"
-import { ethers, BigNumber } from "ethers"
+import { ethers, BigNumber, ContractTransaction } from "ethers"
 
 export const FlipForm = () => {
     const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
@@ -27,12 +27,20 @@ export const FlipForm = () => {
         msgValue: "",
     })
 
-    const { runContractFunction: flipCoin } = useWeb3Contract({
+    const { runContractFunction: flipCoin, isFetching } = useWeb3Contract({
         contractAddress: flippyAddress,
         abi: abi,
         functionName: "flipCoin",
         params: { playerCoinFaceSelection: coinFaceSelection },
         msgValue: ethers.utils.parseEther(wager).toString(),
+    })
+
+    const { runContractFunction: fireEvent } = useWeb3Contract({
+        contractAddress: flippyAddress,
+        abi: abi,
+        functionName: "fireEvent",
+        params: {},
+        msgValue: "",
     })
 
     const updateui = async () => {
@@ -41,22 +49,25 @@ export const FlipForm = () => {
                 onError: (err) => console.log(err),
             })) as BigNumber
         ).toString()
-        console.log(minimumWagerFromCall)
         setMinimumWager(minimumWagerFromCall)
+    }
+
+    const handleFlipCoinSuccess = async (tx: ContractTransaction) => {
+        await tx.wait(1).then((receipt) => {
+            console.log(receipt)
+        })
     }
 
     const callFlipCoin = async () => {
         const flipCoinResult = await flipCoin({
-            onSuccess: () => {},
+            onSuccess: (tx) => handleFlipCoinSuccess(tx as ContractTransaction),
             onError: (err) => {
                 console.log(err)
             },
         })
-        console.log(flipCoinResult)
     }
 
     useEffect(() => {
-        console.log(`web3 enabled: ${isWeb3Enabled}`)
         if (isWeb3Enabled) {
             updateui()
         }
@@ -73,8 +84,9 @@ export const FlipForm = () => {
                 onChange={(e) => setWager(e.target.value)}
                 type="number"
                 validation={{
-                    required: true,
+                    // required: true,
                     // numberMin: ethers.utils.formatUnits(minimumWager, "ether").toString(),
+                    numberMin: 0.1,
                 }}
             />
             <div>Minimum wager: {ethers.utils.formatUnits(minimumWager, "ether")}ETH</div>
@@ -90,7 +102,16 @@ export const FlipForm = () => {
                     theme={coinFaceSelection == CoinFace.Tails ? "primary" : "text"}
                 />
             </div>
-            <Button onClick={async () => callFlipCoin()} text="Flip" theme="primary" />
+            <Button
+                onClick={async function () {
+                    await flipCoin({
+                        onSuccess: (tx) => handleFlipCoinSuccess(tx as ContractTransaction),
+                    })
+                }}
+                disabled={isFetching}
+                text="Flip"
+                theme="primary"
+            />
         </div>
     )
 }
